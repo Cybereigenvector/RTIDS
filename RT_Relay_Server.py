@@ -1,8 +1,16 @@
-###########################################################################################
-#This is a core RT IDS code which Creates a relay server to 
+#------------------------------------------------------------------------------------------
+#This is a core RT IDS code. This Code starts a relay server on the Rasberry pi and 
+#listens on the the port 502 instead of the openplc. Finally the received packets are 
+#relayed back to the openplc. The packets being send to the openplc is monitored by the 
+#machine learning algorithm. Finally if an acctak is detected by the algorithm the packet 
+#is dropped anf the trusted node is added to a blacklist. This IDS provides protection 
+#against the following attack vectors
+#Attack Vectors Detected:-
+#1.DOS(Volumetric DOS)
 #
-#
-###########################################################################################
+#@Rishabh Das
+#Date:-2nd November 2017 
+#------------------------------------------------------------------------------------------
 import socket
 import select
 from datetime import datetime
@@ -12,8 +20,6 @@ import signal
 
 #machine Learning and Data manipulation libraries
 import numpy as np
-#from sklearn.neighbors import LocalOutlierFactor
-#from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import KMeans
 
 from scipy.spatial.distance import cdist
@@ -22,6 +28,12 @@ from scipy.spatial.distance import cdist
 import threading
 import logging
 
+
+#------------------------------------------------------------------------------------------
+#Declaring the buffer size of the packets and the network delay. The forward details of 
+#the OpenPLC port is also declared. Changing the forward to details would determine the 
+#port the RT_IDS will connect to on the PLC Side 
+#------------------------------------------------------------------------------------------
 buffer_size = 4096
 delay = 0.0001
 forward_to = ('localhost', 4321)#Change This!!!
@@ -41,7 +53,9 @@ class Forward:
         except Exception as e:
             print (e)
             return False
-
+#-------------------------------------------------------------------------------------------
+#The Server class. The machine learning algorithm is embedded in the server class 
+#-------------------------------------------------------------------------------------------
 class TheServer:
     input_list = []
     channel = {}
@@ -52,8 +66,6 @@ class TheServer:
     count=0
     trained=0
     lock=0
-    #clf= LocalOutlierFactor(n_neighbors=20)
-    #clf2=NearestNeighbors(radius=200)
     kmeans=KMeans(n_clusters=2, random_state=0)
     min_dist=[0]
 
@@ -98,7 +110,7 @@ class TheServer:
         else:
             print ("Can't establish connection with remote server.")
             print ("Closing connection with client side", clientaddr)
-            clientsock.close()
+            clientsock.close()            
 
     def on_close(self):
         print (self.s.getpeername(), "has disconnected")
@@ -122,9 +134,7 @@ class TheServer:
         self.kmeans.fit_predict(z)
         print(self.kmeans.cluster_centers_)
         self.trained=1
-   
         print("RT_IDS Started Monitoring!!")
-        
         #The algorithm would be trained here
 
     def on_recv(self):
@@ -158,15 +168,12 @@ class TheServer:
                         #self.server.close()
                         #self.server.shutdown(socket.SHUT_RDWR)
         self.prev=self.current
-        #if ((self.current-self.prev).microseconds>0):
-            #print((self.current-self.prev).microseconds)
-        # here we can parse and/or modify the data before send forward
-        # Hello World
-        #print (data)
         self.channel[self.s].send(data)
 
-
-
+#---------------------------------------------------------------------------------------
+#This is the main function. This function calls the the server and the 
+#necessary functions 
+#---------------------------------------------------------------------------------------
 if __name__ == '__main__':
         server = TheServer('192.168.137.113', 502) #Change This!!!!
         signal.signal(signal.SIGINT, die_gracefully)
