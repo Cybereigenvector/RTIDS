@@ -8,6 +8,7 @@ import select
 from datetime import datetime
 import time 
 import sys
+import signal
 
 #machine Learning and Data manipulation libraries
 import numpy as np
@@ -24,6 +25,10 @@ import logging
 buffer_size = 4096
 delay = 0.0001
 forward_to = ('localhost', 4321)#Change This!!!
+
+def die_gracefully(signum, frame):
+    server.server_close()
+    sys.exit(0)
 
 class Forward:
     def __init__(self):
@@ -55,8 +60,11 @@ class TheServer:
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind((host, port))
+        self.server.bind(('', port))
         self.server.listen(2)
+
+    def server_close(self):
+        self.server.close()
 
     def main_loop(self):
         self.input_list.append(self.server)
@@ -113,27 +121,8 @@ class TheServer:
         z=y.reshape(-1,1)
         self.kmeans.fit_predict(z)
         print(self.kmeans.cluster_centers_)
-        self.min_dist = np.min(cdist([[1500]], self.kmeans.cluster_centers_, 'euclidean'), axis=1)
-        print(self.min_dist)
-        self.min_dist = np.min(cdist([[50000]], self.kmeans.cluster_centers_, 'euclidean'), axis=1)
-        print(self.min_dist)
-        self.min_dist = np.min(cdist([[100]], self.kmeans.cluster_centers_, 'euclidean'), axis=1)
-        print(self.min_dist)
-        self.min_dist = np.min(cdist([[500]], self.kmeans.cluster_centers_, 'euclidean'), axis=1)
-        print(self.min_dist)
-        self.min_dist = np.min(cdist([[900]], self.kmeans.cluster_centers_, 'euclidean'), axis=1)
-        print(self.min_dist)
-        self.min_dist = np.min(cdist([[2200]], self.kmeans.cluster_centers_, 'euclidean'), axis=1)
-        print(self.min_dist)
-        #np.reshape(y,-1)
-        #self.clf2.fit(y.reshape(-1,1))
-        #print(self.clf2)
-        #lis_t=self.clf2.kneighbors(100)
-        #print(lis_t[2])
-        #print(trained_classifier.fit_predict(1000))
         self.trained=1
-        time.sleep(5)
-        #print(y.reshape(-1,1))
+   
         print("RT_IDS Started Monitoring!!")
         
         #The algorithm would be trained here
@@ -143,19 +132,24 @@ class TheServer:
         self.current=datetime.now()
         x=(self.current-self.prev).microseconds
         if (x>0):    
-            #print(x)
             if(len(self.dataset)<200):
-                print(len(self.dataset))
+                print(x)
                 self.dataset.append(x)
-                #np.append(self.dataset,x,axis=None)
             elif(self.lock==0):
                 print("Data is ready for training")
                 thread1 = threading.Thread(target=self.train)
                 self.lock=1
                 thread1.start()
             if(self.trained==1):
+                before=datetime.now()
                 self.min_dist = np.min(cdist([[x]], self.kmeans.cluster_centers_, 'euclidean'), axis=1)
-                if(self.min_dist>1000 and x<5000 and x<np.amin(self.kmeans.cluster_centers_)):
+                clus_min=np.amin(self.kmeans.cluster_centers_)
+                after=datetime.now()
+                print(self.min_dist)
+                print(x)
+                print((after-before).microseconds)
+                print("\n\n")
+                if(self.min_dist<1000 and x<5000 and x<clus_min*2):
                     print(self.min_dist)
                     print(x)
                     self.count=self.count+1
@@ -165,8 +159,9 @@ class TheServer:
                         #self.server.shutdown(socket.SHUT_RDWR)
         self.prev=self.current
         #if ((self.current-self.prev).microseconds>0):
-        	#print((self.current-self.prev).microseconds)
+            #print((self.current-self.prev).microseconds)
         # here we can parse and/or modify the data before send forward
+        # Hello World
         #print (data)
         self.channel[self.s].send(data)
 
@@ -174,6 +169,8 @@ class TheServer:
 
 if __name__ == '__main__':
         server = TheServer('192.168.137.113', 502) #Change This!!!!
+        signal.signal(signal.SIGINT, die_gracefully)
+        signal.signal(signal.SIGTERM, die_gracefully)
         try:
             while 1:
                 server.main_loop()
