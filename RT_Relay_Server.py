@@ -160,10 +160,10 @@ class TheServer:
                         if(self.count==10):
                             print("Possible DOS attack!!\nNOTE:-The server was stopped to protect the PLC from DOS attack\nService would be restarted after 5 sec")
                             print("Supected IP has been blacklisted",self.new_connections)
-                            self.flag=0
                             st='sudo iptables -A INPUT -s '+self.new_connections[0] +' -j DROP'
                             os.system(st)
-                            time.sleep(15)
+                            self.flag=1
+                            time.sleep(1)
                             #self.empty_socket()
                             #self.count=0
                             '''
@@ -253,47 +253,6 @@ class TheServer:
 #------------------------------------------------------------------------------------------
     def on_recv(self):
         data = self.data
-        '''
-        self.current=datetime.now()
-        x=(self.current-self.prev).microseconds
-        if (x>0 and x<10000): 
-            print(x)   
-            if(len(self.dataset)<200):
-                print(x,self.s.getpeername())
-                self.dataset.append(x)
-            elif(self.lock==-1):
-                print("Data is ready for training")
-                thread1 = threading.Thread(target=self.train)
-                self.lock=1
-                thread1.start()
-            if(x<200):# and x<5000 and x<clus_min*2):
-                print(self.min_dist)
-                #print(x)
-                self.count=self.count+1
-                if(self.count==7):
-                    self.flag=1
-                    print("Possible DOS attack!!\nNOTE:-The server was stopped to protect the PLC from DOS attack\nService would be restarted after 5 sec")
-                    print("Supected node ",self.s.getpeername())
-                    #print("Suspected attack from ",self.current_connections_addr[0])
-                    #self.blacklist.append(self.current_connections_addr[0])                    
-            if(self.trained==10):
-                before=datetime.now()
-                self.min_dist = np.min(cdist([[x]], self.kmeans.cluster_centers_, 'euclidean'), axis=1)
-                clus_min=np.amin(self.kmeans.cluster_centers_)
-                after=datetime.now()
-                print(self.min_dist)
-                #print(x)
-                #print((after-before).microseconds)
-                #print("\n\n")
-                if(self.min_dist<1500):# and x<5000 and x<clus_min*2):
-                    print(self.min_dist)
-                    #print(x)
-                    self.count=self.count+1
-                    if(self.count==7):
-                        self.flag=1
-                        #self.server.close()
-                        #self.server.shutdown(socket.SHUT_RDWR)
-        self.prev=self.current'''
         self.channel[self.s].send(data)
 
 #---------------------------------------------------------------------------------------
@@ -307,6 +266,7 @@ if __name__ == '__main__':
         try:
             while 1:
                 server.main_loop()
+                sys.exit(1)
                 #print("Possible DOS attack!!\nNOTE:-The server was stopped to protect the PLC from DOS attack\nService would be restarted after 5 sec")
                 time.sleep(5)
                 #server.server_close()
