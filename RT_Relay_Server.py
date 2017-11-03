@@ -65,6 +65,9 @@ class Forward:
 class TheServer:
     input_list = []
     channel = {}
+
+    #The realtime dataset created by the system is stored in this  python list
+    #later this python list is converted to a numpy array 
     dataset = []
 
     #Packet timing
@@ -76,17 +79,17 @@ class TheServer:
     #count of suspicious packets
     count=0
     #locks for training and reset
+    final=0
     trained=0
     lock=0
     alive=0
     #algorithm
     kmeans=KMeans(n_clusters=1, random_state=0)
-    min_dist=[0]
+    cluster_center=[]
 
     #Record of connected clients and servers in the system
     white_list=[]
     new_connections=[]
-    black_list=[]
 
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -119,29 +122,48 @@ class TheServer:
                 x=(self.current-self.prev).microseconds
                 self.prev=self.current
 
-                if(len(self.dataset)<200):
+                if(len(self.dataset)<20 and self.trained==0 or self):
                     if (self.s.getpeername()[0] not in self.white_list):
                             self.white_list.append(self.s.getpeername()[0])
                     if(self.s.getpeername()[0]=='127.0.0.1' and self.trained == 0 ):
                         self.dataset.append(x)
                         print((x),self.s.getpeername()[0])
                         print("Whitelist->",self.white_list)
-                elif (self.lock==0):
+                elif (self.lock==0 or self.final==1):
                     print("Data is ready for training")
                     Algorithm_trainer = threading.Thread(target=self.train)
                     self.lock=1
                     Algorithm_trainer.start()
                 if(self.trained==1):
+                    print (self.cluster_center-200,x)
+                    if(len(self.dataset)<200 and self.s.getpeername()[0]=='127.0.0.1'):
+                        self.dataset.append(x)
+                    elif self.final==0:
+                        self.final=1
                     if (self.s.getpeername()[0] not in self.white_list):
                             self.new_connections.append(self.s.getpeername()[0])
-                    if(self.s.getpeername()[0]=='127.0.0.1'):
+                    if(self.s.getpeername()[0]=='127.0.0.1' and x<(self.cluster_center-200)):
+                        self.count=self.count+1
                         print(x)
+                        if(self.count==10):
+                            print("Possible DOS attack!!\nNOTE:-The server was stopped to protect the PLC from DOS attack\nService would be restarted after 5 sec")
+                            print("Supected IPs ",self.new_connections)
+
+                        '''     if(self.alive==0):
+                             count_reset_handler = threading.Thread(target=self.count_reset)
+                             self.alive=1
+'''
+#-------------------------------------------------------------------------------------------
+#This function is executed by a thread 
+#-------------------------------------------------------------------------------------------
     def count_reset(self):
         time.sleep(10)
         self.count=0
         self.alive=0
         print("Count Reset sucessful!")
-
+#-------------------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------------------
     def on_accept(self):   
         forward = Forward().start(forward_to[0], forward_to[1])
         clientsock, clientaddr = self.server.accept()
@@ -155,7 +177,9 @@ class TheServer:
             print ("Can't establish connection with remote server.")
             print ("Closing connection with client side", clientaddr)
             clientsock.close()            
-
+#------------------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------------------
     def on_close(self):
         print (self.s.getpeername(), "has disconnected")
         #remove objects from input_list
@@ -174,15 +198,28 @@ class TheServer:
 #This function trains the machine learning algorithm once the dataset is ready
 #-----------------------------------------------------------------------------------------
     def train(self):
+        print("Data is being processed")
+        raw_data=np.array(self.dataset)
+        mean=np.mean(raw_data)
+        newdata=[]
+        print("The mean is->",mean)
+        for num in raw_data:
+            if num < mean*2:
+                newdata.append(num)
+        print(newdata)
         print("The IDS algorithm is being trained")
-        #print (self.dataset)
-        #y=np.array(self.dataset).reshape(-1,1)
-        #z=y.reshape(-1,1)
-        self.kmeans.fit_predict(np.array(self.dataset).reshape(-1,1))
+        self.kmeans.fit_predict(np.array(newdata).reshape(-1,1))
         #Verify the performance using coefficient
-        print(self.kmeans.cluster_centers_)
+        self.cluster_center=self.kmeans.cluster_centers_
+        print(self.cluster_center)
         self.trained=1
-        print("RT_IDS Started Monitoring!!")
+        del self.dataset[:]
+        if(self.final==1):
+            self.final=2
+            ##setting final training flag after this step the agorithm is fully functional
+            print("RT_IDS Started Monitoring!!")
+        else:
+            print("RT_IDS Started callibrating!!")
 
 #------------------------------------------------------------------------------------------
 #The dataset is prepared realtime in this framework and once ready the dataset is used for 
