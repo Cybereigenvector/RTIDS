@@ -157,15 +157,15 @@ class TheServer:
                             count_reset_handler.start()
                             self.alive=1
                         print(x)
-                        if(self.count>10):
+                        if(self.count==10):
                             print("Possible DOS attack!!\nNOTE:-The server was stopped to protect the PLC from DOS attack\nService would be restarted after 5 sec")
                             print("Supected IP has been blacklisted",self.new_connections)
                             self.flag=0
                             st='sudo iptables -A INPUT -s '+self.new_connections[0] +' -j DROP'
                             os.system(st)
                             time.sleep(15)
-                            self.empty_socket()
-                            self.count=0
+                            #self.empty_socket()
+                            #self.count=0
                             '''
                             file_obj = os.fdopen(self.server.fileno())
                             file_obj.flush()
