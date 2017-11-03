@@ -2,8 +2,8 @@
 #This is a core RT IDS code. This Code starts a relay server on the Rasberry pi and 
 #listens on the the port 502 instead of the openplc. Finally the received packets are 
 #relayed back to the openplc. The packets being send to the openplc is monitored by the 
-#machine learning algorithm. Finally if an acctak is detected by the algorithm the packet 
-#is dropped anf the trusted node is added to a blacklist. This IDS provides protection 
+#machine learning algorithm. Finally if an attack is detected by the algorithm the packet 
+#is dropped and the trusted node is added to a blacklist. This IDS provides protection 
 #against the following attack vectors
 #
 #Algorithms used:- 
@@ -66,17 +66,27 @@ class TheServer:
     input_list = []
     channel = {}
     dataset = []
+
+    #Packet timing
     prev=datetime.now()
     current=datetime.now()
+
+    #attack detected and fallback control
     flag=0
+    #count of suspicious packets
     count=0
+    #locks for training and reset
     trained=0
     lock=0
-    kmeans=KMeans(n_clusters=2, random_state=0)
+    alive=0
+    #algorithm
+    kmeans=KMeans(n_clusters=1, random_state=0)
     min_dist=[0]
+
+    #Record of connected clients and servers in the system
     white_list=[]
+    new_connections=[]
     black_list=[]
-    current_connections_addr=[]
 
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -100,23 +110,37 @@ class TheServer:
                 if self.s == self.server:
                     self.on_accept()
                     break
-                #print(self.channel)
                 self.data = self.s.recv(buffer_size)
-                #print(self.s.getpeername())
-                if len(self.data) == 0:# or self.s.getpeername() != '192.168.137.1':
+                if len(self.data) == 0:
                     self.on_close()
                     break
                 else:
                     self.on_recv()
-                #list_l=self.s.getpeername()
-                #print(list_l)
-                if(self.s.getpeername()!='127.0.0.1' and self.trained == 0):
-                    if (self.s.getpeername() not in self.white_list):
-                        self.white_list.append(self.s.getpeername())
-                    x=(self.current-self.prev).microseconds
-                    print((x),self.s.getpeername())
-                    print("Whitelist->",self.white_list)
-                    self.prev=self.current
+                x=(self.current-self.prev).microseconds
+                self.prev=self.current
+
+                if(len(self.dataset)<200):
+                    if (self.s.getpeername()[0] not in self.white_list):
+                            self.white_list.append(self.s.getpeername()[0])
+                    if(self.s.getpeername()[0]=='127.0.0.1' and self.trained == 0 ):
+                        self.dataset.append(x)
+                        print((x),self.s.getpeername()[0])
+                        print("Whitelist->",self.white_list)
+                elif (self.lock==0):
+                    print("Data is ready for training")
+                    Algorithm_trainer = threading.Thread(target=self.train)
+                    self.lock=1
+                    Algorithm_trainer.start()
+                if(self.trained==1):
+                    if (self.s.getpeername()[0] not in self.white_list):
+                            self.new_connections.append(self.s.getpeername()[0])
+                    if(self.s.getpeername()[0]=='127.0.0.1'):
+                        print(x)
+    def count_reset(self):
+        time.sleep(10)
+        self.count=0
+        self.alive=0
+        print("Count Reset sucessful!")
 
     def on_accept(self):   
         forward = Forward().start(forward_to[0], forward_to[1])
@@ -152,9 +176,10 @@ class TheServer:
     def train(self):
         print("The IDS algorithm is being trained")
         #print (self.dataset)
-        y=np.array(self.dataset)
-        z=y.reshape(-1,1)
-        self.kmeans.fit_predict(z)
+        #y=np.array(self.dataset).reshape(-1,1)
+        #z=y.reshape(-1,1)
+        self.kmeans.fit_predict(np.array(self.dataset).reshape(-1,1))
+        #Verify the performance using coefficient
         print(self.kmeans.cluster_centers_)
         self.trained=1
         print("RT_IDS Started Monitoring!!")
