@@ -122,7 +122,7 @@ class TheServer:
                 x=(self.current-self.prev).microseconds
                 self.prev=self.current
 
-                if(len(self.dataset)<20 and self.trained==0 or self):
+                if(len(self.dataset)<20 and self.trained==0 ):
                     if (self.s.getpeername()[0] not in self.white_list):
                             self.white_list.append(self.s.getpeername()[0])
                     if(self.s.getpeername()[0]=='127.0.0.1' and self.trained == 0 ):
