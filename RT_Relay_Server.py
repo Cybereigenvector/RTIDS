@@ -5,8 +5,14 @@
 #machine learning algorithm. Finally if an acctak is detected by the algorithm the packet 
 #is dropped anf the trusted node is added to a blacklist. This IDS provides protection 
 #against the following attack vectors
+#
+#Algorithms used:- 
+#1.K-means
+#
+#
 #Attack Vectors Detected:-
 #1.DOS(Volumetric DOS)
+#2.Network anomaly
 #
 #@Rishabh Das
 #Date:-2nd November 2017 
@@ -17,11 +23,11 @@ from datetime import datetime
 import time 
 import sys
 import signal
+import os
 
 #machine Learning and Data manipulation libraries
 import numpy as np
 from sklearn.cluster import KMeans
-
 from scipy.spatial.distance import cdist
 
 #Threading libraries
@@ -68,6 +74,9 @@ class TheServer:
     lock=0
     kmeans=KMeans(n_clusters=2, random_state=0)
     min_dist=[0]
+    white_list=[]
+    black_list=[]
+    current_connections_addr=[]
 
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -85,28 +94,39 @@ class TheServer:
         while (self.flag==0):
             time.sleep(delay)
             ss = select.select
-            inputready, outputready, exceptready = ss(self.input_list, [], [])
+            inputready, outputready, exceptready = ss (self.input_list, [], [])
             for self.s in inputready:
+                self.current=datetime.now()
                 if self.s == self.server:
                     self.on_accept()
                     break
-
+                #print(self.channel)
                 self.data = self.s.recv(buffer_size)
-                if len(self.data) == 0:
+                #print(self.s.getpeername())
+                if len(self.data) == 0:# or self.s.getpeername() != '192.168.137.1':
                     self.on_close()
                     break
                 else:
                     self.on_recv()
+                #list_l=self.s.getpeername()
+                #print(list_l)
+                if(self.s.getpeername()!='127.0.0.1' and self.trained == 0):
+                    if (self.s.getpeername() not in self.white_list):
+                        self.white_list.append(self.s.getpeername())
+                    x=(self.current-self.prev).microseconds
+                    print((x),self.s.getpeername())
+                    print("Whitelist->",self.white_list)
+                    self.prev=self.current
 
-    def on_accept(self):     
+    def on_accept(self):   
         forward = Forward().start(forward_to[0], forward_to[1])
         clientsock, clientaddr = self.server.accept()
+        #self.current_connections_addr.append(clientaddr)
         if forward:
-            print (clientaddr, "has connected")
             self.input_list.append(clientsock)
             self.input_list.append(forward)
             self.channel[clientsock] = forward
-            self.channel[forward] = clientsock
+            self.channel[forward] = clientsock          
         else:
             print ("Can't establish connection with remote server.")
             print ("Closing connection with client side", clientaddr)
@@ -126,6 +146,9 @@ class TheServer:
         del self.channel[out]
         del self.channel[self.s]
 
+#-----------------------------------------------------------------------------------------
+#This function trains the machine learning algorithm once the dataset is ready
+#-----------------------------------------------------------------------------------------
     def train(self):
         print("The IDS algorithm is being trained")
         #print (self.dataset)
@@ -135,39 +158,54 @@ class TheServer:
         print(self.kmeans.cluster_centers_)
         self.trained=1
         print("RT_IDS Started Monitoring!!")
-        #The algorithm would be trained here
 
+#------------------------------------------------------------------------------------------
+#The dataset is prepared realtime in this framework and once ready the dataset is used for 
+#training the algorithm.The training is performed by a separate thread 
+#------------------------------------------------------------------------------------------
     def on_recv(self):
         data = self.data
+        '''
         self.current=datetime.now()
         x=(self.current-self.prev).microseconds
-        if (x>0):    
+        if (x>0 and x<10000): 
+            print(x)   
             if(len(self.dataset)<200):
-                print(x)
+                print(x,self.s.getpeername())
                 self.dataset.append(x)
-            elif(self.lock==0):
+            elif(self.lock==-1):
                 print("Data is ready for training")
                 thread1 = threading.Thread(target=self.train)
                 self.lock=1
                 thread1.start()
-            if(self.trained==1):
+            if(x<200):# and x<5000 and x<clus_min*2):
+                print(self.min_dist)
+                #print(x)
+                self.count=self.count+1
+                if(self.count==7):
+                    self.flag=1
+                    print("Possible DOS attack!!\nNOTE:-The server was stopped to protect the PLC from DOS attack\nService would be restarted after 5 sec")
+                    print("Supected node ",self.s.getpeername())
+                    #print("Suspected attack from ",self.current_connections_addr[0])
+                    #self.blacklist.append(self.current_connections_addr[0])                    
+            if(self.trained==10):
                 before=datetime.now()
                 self.min_dist = np.min(cdist([[x]], self.kmeans.cluster_centers_, 'euclidean'), axis=1)
                 clus_min=np.amin(self.kmeans.cluster_centers_)
                 after=datetime.now()
                 print(self.min_dist)
-                print(x)
-                print((after-before).microseconds)
-                print("\n\n")
-                if(self.min_dist<1000 and x<5000 and x<clus_min*2):
+                #print(x)
+                #print((after-before).microseconds)
+                #print("\n\n")
+                if(self.min_dist<1500):# and x<5000 and x<clus_min*2):
                     print(self.min_dist)
-                    print(x)
+                    #print(x)
                     self.count=self.count+1
                     if(self.count==7):
                         self.flag=1
                         #self.server.close()
                         #self.server.shutdown(socket.SHUT_RDWR)
-        self.prev=self.current
+        self.prev=self.current'''
         self.channel[self.s].send(data)
 
 #---------------------------------------------------------------------------------------
@@ -175,14 +213,15 @@ class TheServer:
 #necessary functions 
 #---------------------------------------------------------------------------------------
 if __name__ == '__main__':
-        server = TheServer('192.168.137.113', 502) #Change This!!!!
+        server = TheServer('localhost', 502) #Change This!!!!
         signal.signal(signal.SIGINT, die_gracefully)
         signal.signal(signal.SIGTERM, die_gracefully)
         try:
             while 1:
                 server.main_loop()
-                print("Possible DOS attack!!\nNOTE:-The server was stopped to protect the PLC from DOS attack\nService would be restarted after 5 sec")
+                #print("Possible DOS attack!!\nNOTE:-The server was stopped to protect the PLC from DOS attack\nService would be restarted after 5 sec")
                 time.sleep(5)
-        except KeyboardInterrupt:
+                #server.server_close()
+        except KeyboardInterrupt :
             print ("Ctrl C - Stopping server")
             sys.exit(1)
