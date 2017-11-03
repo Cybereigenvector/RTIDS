@@ -92,6 +92,8 @@ class TheServer:
     white_list=[]
     new_connections=[]
 
+    blacklist=[]
+
     def __init__(self, host, port):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -152,13 +154,27 @@ class TheServer:
                         print(x)
                         if(self.count==10):
                             print("Possible DOS attack!!\nNOTE:-The server was stopped to protect the PLC from DOS attack\nService would be restarted after 5 sec")
-                            print("Supected IPs ",self.new_connections)
-                            self.flag=1
+                            print("Supected IP has been blacklisted",self.new_connections)
+                            self.flag=0
+                            st='sudo iptables -A INPUT -s '+self.new_connections[0] +' -j DROP'
+                            os.system(st)
+                            self.empty_socket()
+                            time.sleep(10)
+
 
                         '''if(self.alive==0):
                              count_reset_handler = threading.Thread(target=self.count_reset)
                              self.alive=1
 '''
+#-------------------------------------------------------------------------------------------
+#This function empties the socket filled up by DOS
+#-------------------------------------------------------------------------------------------
+    def empty_socket(self):
+        input = [self.server]
+        while 1:
+            inputready, o, e = select.select(input,[],[], 0.0)
+            if len(inputready)==0: break
+            for s in inputready: s.recv(1)
 #-------------------------------------------------------------------------------------------
 #This function is executed by a thread 
 #-------------------------------------------------------------------------------------------
