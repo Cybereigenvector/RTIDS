@@ -42,7 +42,7 @@ import logging
 #port the RT_IDS will connect to on the PLC Side 
 #------------------------------------------------------------------------------------------
 buffer_size = 4096
-delay = 0.0001
+delay = 0.0009
 forward_to = ('localhost', 4321)#Change This!!!
 
 def die_gracefully(signum, frame):
@@ -151,35 +151,39 @@ class TheServer:
                             self.new_connections.append(self.s.getpeername()[0])
                     if(self.s.getpeername()[0]=='127.0.0.1' and x<(self.cluster_center-200) and self.final==2):
                         self.count=self.count+1
+                        if(self.alive==0):
+                            print("Count Reset Started")
+                            count_reset_handler = threading.Thread(target=self.count_reset)
+                            count_reset_handler.start()
+                            self.alive=1
                         print(x)
-                        if(self.count==10):
+                        if(self.count>10):
                             print("Possible DOS attack!!\nNOTE:-The server was stopped to protect the PLC from DOS attack\nService would be restarted after 5 sec")
                             print("Supected IP has been blacklisted",self.new_connections)
                             self.flag=0
                             st='sudo iptables -A INPUT -s '+self.new_connections[0] +' -j DROP'
                             os.system(st)
+                            time.sleep(15)
                             self.empty_socket()
-                            time.sleep(10)
+                            self.count=0
+                            '''
+                            file_obj = os.fdopen(self.server.fileno())
+                            file_obj.flush()
+                            os.close(file_obj)'''
+                            
+                        
 
-
-                        '''if(self.alive==0):
-                             count_reset_handler = threading.Thread(target=self.count_reset)
-                             self.alive=1
-'''
 #-------------------------------------------------------------------------------------------
 #This function empties the socket filled up by DOS
 #-------------------------------------------------------------------------------------------
     def empty_socket(self):
-        input = [self.server]
-        while 1:
-            inputready, o, e = select.select(input,[],[], 0.0)
-            if len(inputready)==0: break
-            for s in inputready: s.recv(1)
+        file_obj = os.fdopen(self.server.fileno())
+        file_obj.flush()
 #-------------------------------------------------------------------------------------------
 #This function is executed by a thread 
 #-------------------------------------------------------------------------------------------
     def count_reset(self):
-        time.sleep(10)
+        time.sleep(5)
         self.count=0
         self.alive=0
         print("Count Reset sucessful!")
