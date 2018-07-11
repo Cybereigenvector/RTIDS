@@ -1,3 +1,13 @@
+# -----------------------------------------------------------------------------------------------------
+# This is the main sniffer program that captures all the traffic from the trusted nodes to the PLC
+# The network packets are meaningfully parsed by the different modules of the program and finally
+# a data set is created that is used by the machine learning module of the RT-IDS for training the
+# IDS. After training, the IDS reports back to the central process if any anomaly is detected
+# Parts of the sniffer code is based on Bukky Roberts
+# Code Created by Rishabh Das 11th July 2018
+# -----------------------------------------------------------------------------------------------------
+
+
 import socket
 from general import *
 from networking.ethernet import Ethernet
