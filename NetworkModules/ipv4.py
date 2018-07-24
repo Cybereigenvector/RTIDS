@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------------
+# This module of the IDS is designed to unpack the IPv4 header of the incoming
+# network packets
+# Created by Rishabh Das
+# Date 11th July 2018
+# -----------------------------------------------------------------------------------
 import struct
 
 
