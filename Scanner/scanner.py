@@ -7,7 +7,7 @@
 import netifaces
 
 
-class Scanner:
+class NetworkScanner:
 
     # ----------------------------------------------------------------------------
     # Init function that initializes the functions and the variables when the
@@ -23,7 +23,7 @@ class Scanner:
     # MAC addresses with that interfaces and compiles a dictionary
     #
     # These numbers are for troubleshooting, in reality AF_LINK or AF_INET would be used
-    # directly to access the information
+    # directly to access the information. These number migh be system dependent
     # 17-> AF_LINK - This is the link layer interface and the MAC Address is recorded
     #      from this interface
     # 2 -> AF_INET - This is the normal internet interface and the IP address is
@@ -40,31 +40,23 @@ class Scanner:
             addrs = netifaces.ifaddresses(i)
             link = netifaces.AF_LINK
             internet = netifaces.AF_INET
+            bool_internet = False
+            bool_mac =False
             for k, v in addrs.items():
-                find = True
                 if k is link:
+                    bool_mac = True
                     for x in v:
-                        if 'addr' in x:
-                            mac_list.append(x['addr'])
-                        else:
-                            print('blah')
+                        mac_list.append(x['addr'])
                 elif k is internet:
+                    bool_internet = True
                     for x in v:
-                        if 'addr' in x:
-                            print(x)
-                            ip_list.append(x['addr'])
-                        else:
-                            print('Blah Internet')
-        #print(ip_list)
-        #print(mac_list)
-
-
-            # print(mac_list)
-            # print(addrs[2])
-            # print(addr[netifaces.AF_LINK])
-            # print(netifaces.ifaddresses(i))
-
-
+                        ip_list.append(x['addr'])
+            if not bool_internet:
+                ip_list.append("NA")
+            if not bool_mac:
+                mac_list.append("NA")
+        print(ip_list)
+        print(mac_list)
 
     # ----------------------------------------------------------------------------
     #   This module is the actual scanner that scans the network to find the
