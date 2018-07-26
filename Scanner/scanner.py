@@ -6,17 +6,17 @@
 # ----------------------------------------------------------------
 import netifaces
 
-
 class NetworkScanner:
 
     # ----------------------------------------------------------------------------
     # Init function that initializes the functions and the variables when the
     # scanner is called from its instance
     # ----------------------------------------------------------------------------
-    def __init__(self, range, port):
-        self.ip_range = range  # Provides the Ip addresses of the network to be scanned
-        self.port_range = port  # provides a list of ports to be scanned, if the list is
-        # empty all ports are scanned
+
+    def __init__(self):
+        self.mac_list = []
+        self.ip_list = []
+        self.interface_list = []
 
     # --------------------------------------------------------------------------------
     # This functions finds all the interfaces. The Associated IP addresses and the
@@ -30,13 +30,11 @@ class NetworkScanner:
     #      recorded from this interface
     # 10-> IPv6 - This is not considered in this IPS code. The IPS can only handle
     # --------------------------------------------------------------------------------
+
     def interfaces(self):
-        mac_list = []
-        ip_list = []
-        interface_list = netifaces.interfaces()
-        print ("The number of interfaces connected to the computer is " + str(len(interface_list)))
-        print(interface_list)
-        for i in interface_list:
+        self.interface_list = netifaces.interfaces()
+        print(self.interface_list)
+        for i in self.interface_list:
             addrs = netifaces.ifaddresses(i)
             link = netifaces.AF_LINK
             internet = netifaces.AF_INET
@@ -46,22 +44,39 @@ class NetworkScanner:
                 if k is link:
                     bool_mac = True
                     for x in v:
-                        mac_list.append(x['addr'])
+                        self.mac_list.append(x['addr'])
                 elif k is internet:
                     bool_internet = True
                     for x in v:
-                        ip_list.append(x['addr'])
+                        self.ip_list.append(x['addr'])
             if not bool_internet:
-                ip_list.append("NA")
+                self.ip_list.append("NA")
             if not bool_mac:
-                mac_list.append("NA")
-        print(ip_list)
-        print(mac_list)
+                self.mac_list.append("NA")
+        print(self.ip_list)
+        print(self.mac_list)
 
+    # ------------------------------------------------------------------------------
+    # This function creates record of the Mac addresses and the IP adresses
+    # ------------------------------------------------------------------------------
+
+    def create_record(self):
+        if self.mac_list == [] or self.ip_list== []:
+            print ("The lists are empty !! \nNothing to Write")
+        else:
+            print("Writing to file!!!")
+    # ------------------------------------------------------------------------------
+    # The IP addresses and the MAC Addresses are formatted by this function
+    # ------------------------------------------------------------------------------
+
+    def format_addr(self):
+        # This function formats the addresses found in the list
+        print("Hello World")
     # ----------------------------------------------------------------------------
     #   This module is the actual scanner that scans the network to find the
     #   potential PLCs and the instances of the IDS running
     # -----------------------------------------------------------------------------
+
     def scan_fun(self):
         network_scanner = nmap.PortScanner()
         network_scanner.scan('192.168.137.205', '10-443')
@@ -81,5 +96,7 @@ class NetworkScanner:
         return netifaces.AF_INET in addr
 
 
-nm = Scanner(123, 123)
+nm = NetworkScanner()
+nm.create_record()
 nm.interfaces()
+nm.create_record()
