@@ -16,7 +16,12 @@ class NetworkScanner:
     def __init__(self):
         self.mac_list = []
         self.ip_list = []
-        self.interface_list = []
+        self.interface_list = netifaces.interfaces()
+
+        self.loop_back = ''
+        self.connected_interface = []
+        self.connected_interface_index = []
+        self.scan_ip = []
 
     # --------------------------------------------------------------------------------
     # This functions finds all the interfaces. The Associated IP addresses and the
@@ -32,7 +37,6 @@ class NetworkScanner:
     # --------------------------------------------------------------------------------
 
     def interfaces(self):
-        self.interface_list = netifaces.interfaces()
         print(self.interface_list)
         for i in self.interface_list:
             addrs = netifaces.ifaddresses(i)
@@ -57,6 +61,19 @@ class NetworkScanner:
         print(self.mac_list)
 
     # ------------------------------------------------------------------------------
+    # The IP addresses and the MAC Addresses are formatted by this function
+    # ------------------------------------------------------------------------------
+
+    def format_addr(self):
+        self.loop_back = self.ip_list[self.interface_list.index('lo')]
+        count = 0
+        for i in self.ip_list:
+            count = count + 1
+            if i is not self.loop_back and i is not 'NA':
+                self.connected_interface.append(i)
+                self.connected_interface_index.append(count)
+
+    # ------------------------------------------------------------------------------
     # This function creates record of the Mac addresses and the IP adresses
     # ------------------------------------------------------------------------------
 
@@ -65,13 +82,6 @@ class NetworkScanner:
             print ("The lists are empty !! \nNothing to Write")
         else:
             print("Writing to file!!!")
-    # ------------------------------------------------------------------------------
-    # The IP addresses and the MAC Addresses are formatted by this function
-    # ------------------------------------------------------------------------------
-
-    def format_addr(self):
-        # This function formats the addresses found in the list
-        print("Hello World")
     # ----------------------------------------------------------------------------
     #   This module is the actual scanner that scans the network to find the
     #   potential PLCs and the instances of the IDS running
@@ -100,3 +110,4 @@ nm = NetworkScanner()
 nm.create_record()
 nm.interfaces()
 nm.create_record()
+nm.format_addr()
