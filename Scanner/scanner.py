@@ -1,7 +1,11 @@
 # ----------------------------------------------------------------
-# This module scans the network of the IDS to detect
-# other instances of IDS running on the network. This
-# scanning module also creates a list of active clients.
+#
+# -> Finds all the interfaces in the computer
+# -> Finds the IP addresses of the connected interfaces
+# -> Finds the active PLCs in the found interfaces
+#
+# Future:-
+# -> Finds the active
 # By:- Rishabh Das
 # ----------------------------------------------------------------
 import netifaces
@@ -10,18 +14,21 @@ class NetworkScanner:
 
     # ----------------------------------------------------------------------------
     # Init function that initializes the functions and the variables when the
-    # scanner is called from its instance
+    # scanner. The instance variables are initialized in this function
     # ----------------------------------------------------------------------------
 
-    def __init__(self):
+    def __init__(self,port='502',ips='200.200.200.1',plc='100.100.100.1'):
         self.mac_list = []
         self.ip_list = []
         self.interface_list = netifaces.interfaces()
 
         self.loop_back = ''
-        self.connected_interface = []
+        self.connected_interface_ip = []
         self.connected_interface_index = []
         self.scan_ip = []
+        self.port_range = port
+        self.ips_ip = ips
+        self.plc_ip = plc
 
     # --------------------------------------------------------------------------------
     # This functions finds all the interfaces. The Associated IP addresses and the
@@ -70,11 +77,40 @@ class NetworkScanner:
         for i in self.ip_list:
             count = count + 1
             if i is not self.loop_back and i is not 'NA':
-                self.connected_interface.append(i)
+                self.connected_interface_ip.append(i)
                 self.connected_interface_index.append(count)
+        for i in self.connected_interface_ip:
+            count = 0
+            temp=''
+            for c in i:
+                if count < 3:
+                    temp = temp + c
+                else:
+                    temp = temp + '1'
+                    self.scan_ip.append(temp)
+                    break
+                if c is '.':
+                    count = count + 1
 
     # ------------------------------------------------------------------------------
-    # This function creates record of the Mac addresses and the IP adresses
+    # This function summarizes the findings of all the functions
+    # ------------------------------------------------------------------------------
+
+    def show_summary(self):
+        print("================================SUMMARY================================")
+        print("Connected interfaces - >", self.interface_list)
+        print("MAC addresses of the interfaces - >", self.mac_list)
+        print("IP addresses associated with the interfaces - >", self.ip_list)
+        print("Active interface IPs - >",self.connected_interface_ip)
+        print("IP range being scanned - >",self.scan_ip)
+        print("Port range being scanned - >", self.port_range)
+        print("IPS network - >",self.ips_ip)
+        print("PLC network - >", self.plc_ip)
+        print("List of active PLCs - >")
+
+
+    # ------------------------------------------------------------------------------
+    # This function creates record of the Mac addresses and the IP addresses
     # ------------------------------------------------------------------------------
 
     def create_record(self):
@@ -106,8 +142,9 @@ class NetworkScanner:
         return netifaces.AF_INET in addr
 
 
-nm = NetworkScanner()
+nm = NetworkScanner('10-1000')
 nm.create_record()
 nm.interfaces()
 nm.create_record()
 nm.format_addr()
+nm.show_summary()
