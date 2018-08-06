@@ -4,11 +4,17 @@
 # -> Finds the IP addresses of the connected interfaces
 # -> Finds the active PLCs in the found interfaces
 #
-# Future:-
-# -> Finds the active
+# Future Plans:-
+# -> Finds the active IPS clients
+# -> Find the configuration of the IPS
+#
+# Dependencies:-
+# -> Nmap
+# -> netifaces .10
 # By:- Rishabh Das
 # ----------------------------------------------------------------
 import netifaces
+import nmap
 
 class NetworkScanner:
 
@@ -17,7 +23,7 @@ class NetworkScanner:
     # scanner. The instance variables are initialized in this function
     # ----------------------------------------------------------------------------
 
-    def __init__(self,port='502',ips='200.200.200.1',plc='100.100.100.1'):
+    def __init__(self,port='502', ips='200.200.200.1', plc='100.100.100.1'):
         self.mac_list = []
         self.ip_list = []
         self.interface_list = netifaces.interfaces()
@@ -68,7 +74,8 @@ class NetworkScanner:
         print(self.mac_list)
 
     # ------------------------------------------------------------------------------
-    # The IP addresses and the MAC Addresses are formatted by this function
+    # The IP addresses and the MAC Addresses are formatted by this function.
+    # The formatted addresses are later used by the scanner function
     # ------------------------------------------------------------------------------
 
     def format_addr(self):
@@ -108,7 +115,6 @@ class NetworkScanner:
         print("PLC network - >", self.plc_ip)
         print("List of active PLCs - >")
 
-
     # ------------------------------------------------------------------------------
     # This function creates record of the Mac addresses and the IP addresses
     # ------------------------------------------------------------------------------
@@ -118,16 +124,17 @@ class NetworkScanner:
             print ("The lists are empty !! \nNothing to Write")
         else:
             print("Writing to file!!!")
+
     # ----------------------------------------------------------------------------
     #   This module is the actual scanner that scans the network to find the
-    #   potential PLCs and the instances of the IDS running
+    #   potential PLCs and the instances of the IPS running
     # -----------------------------------------------------------------------------
 
-    def scan_fun(self):
-        network_scanner = nmap.PortScanner()
-        network_scanner.scan('192.168.137.205', '10-443')
-        print(network_scanner.all_hosts())
-        print(network_scanner.scaninfo())
+    def network_scanner(self):
+        net_scan = nmap.PortScanner()
+        net_scan.scan(str(self.scan_ip[0])+"/24", self.port_range)
+        print(net_scan.all_hosts())
+        print(net_scan.scaninfo())
 
     # -----------------------------------------------------------------------------
     #   Compiles a list of Online IPS or the PLCs
@@ -142,9 +149,10 @@ class NetworkScanner:
         return netifaces.AF_INET in addr
 
 
-nm = NetworkScanner('10-1000')
+nm = NetworkScanner()
 nm.create_record()
 nm.interfaces()
 nm.create_record()
 nm.format_addr()
 nm.show_summary()
+nm.network_scanner()
