@@ -40,6 +40,7 @@ class IPSserver:
     def initialize_server(self):
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             print("Socket created successfully!")
 
         except socket.error as err:
@@ -65,13 +66,30 @@ class IPSserver:
     # -----------------------------------------------------------
 
     def client_handler(self,client,client_addr):
+        print(client_addr)
         while True:
             data = client.recv(1024)
-            for connection in self.connections:
-                connection.send(data)
+            print(data.strip())
+            reply = self.interprete_data(data.strip())
+            client.sendto(reply,client_addr)
             if not data:
                 break
             print(threading.currentThread().getName() +": "+ data)
+
+    # -----------------------------------------------------------
+    # This function interprets the received commands and calls the
+    # necessary function to perform the required operations.
+    # -----------------------------------------------------------
+
+    def interprete_data(self,msg):
+        prepstr=""
+        if msg == "Hi":
+            prepstr ="Hi_returned"
+        elif msg == "Hello":
+            prepstr ="Hello_returned"
+        else:
+            prepstr ="Something else!!"
+        return prepstr
 
     # -----------------------------------------------------------
     # This function receives the clients and assigns a handler to
@@ -91,7 +109,7 @@ class IPSserver:
             print(self.connections)
 
 
-ins= IPSserver(5002,"127.0.0.1")
+ins= IPSserver(5002,"192.168.137.205")
 ins.initialize_server()
 ins.start_server()
 #ins.client_handler()
