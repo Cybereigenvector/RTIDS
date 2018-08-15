@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------------
 # This module of the IDS is designed to unpack the Ethernet header of the incoming
 # network packets
-# Created by Rishabh Das
+# Created by Rishabh Das program based on Bucky robert's (new boston) network sniffer
 # Date 11th July 2018
 # -----------------------------------------------------------------------------------
 import socket

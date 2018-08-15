@@ -18,4 +18,25 @@
 # -> pyshark
 # By:- Rishabh Das
 # ----------------------------------------------------------------
+import socket
+
+
+class Sniffer:
+
+
+    def connect_adapter(self,prt = 502):
+        connect = socket.socket(socket.AF_PACKET, socket_SOCK_RAW, scoket.ntohs(3))
+        raw_data, addr = connect.recvfrom(prt)
+
+        print("This Function connects the ")
+
+
+    def get_info(self):
+        print("Get the infor from the network packets coming in")
+    def store_info_to_DB(self):
+        print("Storing the received info into a database")
+    def print_info(self):
+        print("Printing the received packets in parsed format")
+    def sniffer_handler(self):
+        print("This function handles all the function when it is called from an external program")
 
