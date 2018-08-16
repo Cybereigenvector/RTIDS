@@ -9,14 +9,15 @@
 
 
 import socket
-from RT_General import *
+from NetworkModules.general import *
+from NetworkModules.ipv4 import IPv4
+from NetworkModules.icmp import ICMP
+from NetworkModules.tcp import TCP
+from NetworkModules.udp import UDP
+from NetworkModules.pcap import Pcap
+from NetworkModules.http import HTTP
 from NetworkModules.ethernet import Ethernet
-from networking.ipv4 import IPv4
-from networking.icmp import ICMP
-from networking.tcp import TCP
-from networking.udp import UDP
-from networking.pcap import Pcap
-from networking.http import HTTP
+
 
 TAB_1 = '\t - '
 TAB_2 = '\t\t - '
@@ -49,6 +50,7 @@ def main():
             print(TAB_2 + 'Protocol: {}, Source: {}, Target: {}'.format(ipv4.proto, ipv4.src, ipv4.target))
 
             # ICMP
+
             if ipv4.proto == 1:
                 icmp = ICMP(ipv4.data)
                 print(TAB_1 + 'ICMP Packet:')
