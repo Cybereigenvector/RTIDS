@@ -9,8 +9,8 @@
 
 
 import socket
-from general import *
-from networking.ethernet import Ethernet
+from RT_General import *
+from NetworkModules.ethernet import Ethernet
 from networking.ipv4 import IPv4
 from networking.icmp import ICMP
 from networking.tcp import TCP
